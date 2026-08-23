@@ -1,0 +1,880 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<!-- ========== 顶级配置：改这里的字符串即可替换头像、关注链接、打赏码、网站标题 ========== -->
+<script>
+  window.SITE_CONFIG = {
+    SITE_TITLE:   "朱雀 AI 文本检测器 - 免费精准检测",
+    AVATAR_URL:   "https://api.dicebear.com/7.x/adventurer/svg?seed=zhuque&backgroundColor=c8102e",
+    FOLLOW_LINK:  "https://mp.weixin.qq.com/",
+    REWARD_QR_CODE: "https://api.qrserver.com/v1/create-qr-code/?size=240x240&data=https://mp.weixin.qq.com/"
+  };
+  document.title = window.SITE_CONFIG.SITE_TITLE;
+</script>
+<style>
+  /* ========== 全局变量 & 重置 ========== */
+  :root {
+    --primary: #C8102E;
+    --primary-light: #E63946;
+    --primary-dark: #9B0C23;
+    --primary-bg: #FFF5F5;
+    --text: #1a1a1a;
+    --text-secondary: #666;
+    --text-muted: #999;
+    --border: #eee;
+    --bg: #fafafa;
+    --card-bg: #fff;
+    --shadow: 0 2px 12px rgba(0,0,0,0.06);
+    --shadow-hover: 0 8px 30px rgba(200,16,46,0.12);
+    --radius: 14px;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    line-height: 1.6;
+    min-height: 100vh;
+  }
+  a { color: inherit; text-decoration: none; }
+  button { cursor: pointer; font-family: inherit; border: none; background: none; }
+
+  /* ========== 顶部导航 ========== */
+  .header {
+    position: sticky; top: 0; z-index: 100;
+    background: rgba(255,255,255,0.85);
+    backdrop-filter: blur(12px);
+    border-bottom: 1px solid var(--border);
+  }
+  .header-inner {
+    max-width: 960px; margin: 0 auto;
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 12px 20px; gap: 12px;
+  }
+  .logo {
+    display: flex; align-items: center; gap: 10px;
+    font-size: 18px; font-weight: 700; color: var(--text);
+    cursor: pointer;
+  }
+  .logo-icon {
+    width: 36px; height: 36px; border-radius: 10px;
+    background: linear-gradient(135deg, var(--primary), var(--primary-light));
+    display: flex; align-items: center; justify-content: center;
+    color: #fff; font-size: 20px; font-weight: 800;
+    box-shadow: 0 2px 8px rgba(200,16,46,0.3);
+  }
+  .nav-actions { display: flex; align-items: center; gap: 8px; }
+  .nav-btn {
+    display: flex; align-items: center; gap: 6px;
+    padding: 7px 14px; border-radius: 50px;
+    font-size: 13px; font-weight: 500; color: var(--text-secondary);
+    transition: all .2s;
+  }
+  .nav-btn:hover { background: var(--primary-bg); color: var(--primary); }
+  .nav-btn.follow { color: var(--primary); font-weight: 600; }
+  .nav-btn.follow img {
+    width: 26px; height: 26px; border-radius: 50%;
+    border: 2px solid var(--primary); object-fit: cover;
+  }
+  .nav-btn.reward {
+    background: linear-gradient(135deg, var(--primary), var(--primary-light));
+    color: #fff;
+  }
+  .nav-btn.reward:hover { opacity: .9; transform: translateY(-1px); }
+
+  /* ========== 主体 ========== */
+  .main { max-width: 760px; margin: 0 auto; padding: 32px 20px 60px; }
+  .hero { text-align: center; margin-bottom: 28px; }
+  .hero h1 {
+    font-size: 32px; font-weight: 800;
+    background: linear-gradient(135deg, var(--primary), var(--primary-light));
+    -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+    background-clip: text;
+    margin-bottom: 8px;
+  }
+  .hero p { color: var(--text-secondary); font-size: 15px; }
+
+  /* 额度徽章 */
+  .quota-badge {
+    display: inline-flex; align-items: center; gap: 6px;
+    background: var(--primary-bg); color: var(--primary);
+    padding: 5px 14px; border-radius: 50px;
+    font-size: 13px; font-weight: 600; margin-top: 12px;
+  }
+  .quota-badge.hidden { display: none; }
+
+  /* ========== 输入卡片 ========== */
+  .card {
+    background: var(--card-bg);
+    border-radius: var(--radius);
+    box-shadow: var(--shadow);
+    padding: 24px;
+    margin-bottom: 20px;
+  }
+  .textarea-wrap { position: relative; }
+  textarea {
+    width: 100%; min-height: 200px;
+    border: 2px solid var(--border);
+    border-radius: 12px;
+    padding: 16px; font-size: 15px;
+    font-family: inherit; resize: vertical;
+    transition: border-color .2s;
+    outline: none; line-height: 1.7;
+  }
+  textarea:focus { border-color: var(--primary); }
+  .char-count {
+    position: absolute; bottom: 12px; right: 14px;
+    font-size: 12px; color: var(--text-muted);
+    background: rgba(255,255,255,0.9); padding: 2px 8px; border-radius: 4px;
+  }
+  .char-count.over { color: var(--primary); font-weight: 600; }
+
+  /* 自带 Key 折叠区 */
+  .apikey-toggle {
+    display: flex; align-items: center; gap: 6px;
+    font-size: 13px; color: var(--text-secondary);
+    margin-top: 14px; cursor: pointer; user-select: none;
+  }
+  .apikey-toggle:hover { color: var(--primary); }
+  .apikey-toggle .arrow { transition: transform .2s; font-size: 10px; }
+  .apikey-toggle.open .arrow { transform: rotate(90deg); }
+  .apikey-panel {
+    display: none; margin-top: 12px;
+    padding: 14px; background: #f9f9f9; border-radius: 10px;
+  }
+  .apikey-panel.show { display: block; }
+  .apikey-panel label {
+    display: block; font-size: 12px; color: var(--text-secondary); margin-bottom: 6px;
+  }
+  .apikey-panel input {
+    width: 100%; padding: 10px 14px; border: 1px solid var(--border);
+    border-radius: 8px; font-size: 14px; outline: none;
+    font-family: "Courier New", monospace;
+  }
+  .apikey-panel input:focus { border-color: var(--primary); }
+  .apikey-panel select {
+    width: 100%; padding: 10px 14px; border: 1px solid var(--border);
+    border-radius: 8px; font-size: 14px; outline: none; margin-bottom: 12px;
+    background: #fff; cursor: pointer;
+  }
+  .apikey-panel select:focus { border-color: var(--primary); }
+  .apikey-hint { font-size: 11px; color: var(--text-muted); margin-top: 6px; }
+
+  /* 检测按钮 */
+  .detect-btn {
+    width: 100%; margin-top: 18px;
+    padding: 15px; border-radius: 12px;
+    background: linear-gradient(135deg, var(--primary), var(--primary-light));
+    color: #fff; font-size: 16px; font-weight: 700;
+    transition: all .2s;
+    box-shadow: 0 4px 16px rgba(200,16,46,0.3);
+  }
+  .detect-btn:hover:not(:disabled) { transform: translateY(-2px); box-shadow: 0 6px 24px rgba(200,16,46,0.4); }
+  .detect-btn:disabled { opacity: .6; cursor: not-allowed; }
+  .detect-btn.loading { pointer-events: none; }
+
+  /* ========== 结果区 ========== */
+  .result-section { display: none; }
+  .result-section.show { display: block; }
+
+  .probability-card {
+    text-align: center; padding: 32px 24px;
+  }
+  .prob-ring {
+    width: 140px; height: 140px; margin: 0 auto 16px;
+    position: relative;
+  }
+  .prob-ring svg { transform: rotate(-90deg); }
+  .prob-ring .bg { fill: none; stroke: #f0f0f0; stroke-width: 10; }
+  .prob-ring .fg {
+    fill: none; stroke-width: 10; stroke-linecap: round;
+    stroke: url(#grad);
+    transition: stroke-dashoffset 1s ease;
+  }
+  .prob-value {
+    position: absolute; inset: 0;
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+  }
+  .prob-value .num { font-size: 36px; font-weight: 800; color: var(--primary); }
+  .prob-value .label { font-size: 12px; color: var(--text-muted); }
+  .verdict {
+    font-size: 20px; font-weight: 700; margin-bottom: 4px;
+  }
+  .verdict-desc { font-size: 14px; color: var(--text-secondary); }
+
+  .section-title {
+    font-size: 15px; font-weight: 700; margin-bottom: 14px;
+    display: flex; align-items: center; gap: 8px;
+  }
+  .section-title::before {
+    content: ''; width: 4px; height: 16px;
+    background: var(--primary); border-radius: 2px;
+  }
+
+  .dim-grid {
+    display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px;
+  }
+  .dim-item {
+    background: #fafafa; border-radius: 10px; padding: 14px;
+  }
+  .dim-item h4 { font-size: 13px; color: var(--primary); margin-bottom: 6px; font-weight: 700; }
+  .dim-item p { font-size: 13px; color: var(--text-secondary); line-height: 1.6; }
+
+  .suspicious-list { list-style: none; }
+  .suspicious-list li {
+    padding: 10px 14px; background: #fff8f8;
+    border-left: 3px solid var(--primary);
+    border-radius: 0 8px 8px 0;
+    font-size: 14px; color: var(--text); margin-bottom: 8px;
+    line-height: 1.6;
+  }
+  .advice-box {
+    background: linear-gradient(135deg, #f0fdf4, #f0fff4);
+    border: 1px solid #bbf7d0;
+    border-radius: 10px; padding: 16px;
+    font-size: 14px; color: #166534; line-height: 1.7;
+  }
+
+  /* ========== 原文高亮标注 ========== */
+  .highlight-card { padding: 20px 24px; }
+  .highlight-legend {
+    display: flex; gap: 16px; flex-wrap: wrap;
+    margin-bottom: 14px; font-size: 12px; color: var(--text-secondary);
+  }
+  .legend-item { display: flex; align-items: center; gap: 5px; }
+  .legend-dot { width: 12px; height: 12px; border-radius: 3px; }
+  .legend-dot.high { background: #fee2e2; border: 1.5px solid #dc2626; }
+  .legend-dot.medium { background: #ffedd5; border: 1.5px solid #f97316; }
+  .legend-dot.low { background: #fef9c3; border: 1.5px solid #eab308; }
+  .highlight-text {
+    font-size: 15px; line-height: 2; color: var(--text);
+    background: #fafafa; border-radius: 10px; padding: 24px 18px 16px;
+  }
+  .hl {
+    border-radius: 3px; padding: 1px 3px; cursor: help;
+    border-bottom: 2px solid transparent; transition: all .15s;
+  }
+  .hl:hover { transform: translateY(-1px); }
+  .hl-high { background: #fee2e2; border-bottom-color: #dc2626; color: #991b1b; }
+  .hl-medium { background: #ffedd5; border-bottom-color: #f97316; color: #9a3412; }
+  .hl-low { background: #fef9c3; border-bottom-color: #eab308; color: #854d0e; }
+  .no-suspicious { color: var(--text-muted); font-size: 14px; text-align: center; padding: 20px; }
+
+  /* ========== 弹窗 ========== */
+  .modal-overlay {
+    display: none; position: fixed; inset: 0; z-index: 1000;
+    background: rgba(0,0,0,0.5); backdrop-filter: blur(4px);
+    align-items: center; justify-content: center; padding: 20px;
+  }
+  .modal-overlay.show { display: flex; }
+  .modal {
+    background: #fff; border-radius: 20px; padding: 32px;
+    max-width: 440px; width: 100%; position: relative;
+    box-shadow: 0 20px 60px rgba(0,0,0,0.2);
+    animation: modalIn .3s ease;
+  }
+  @keyframes modalIn {
+    from { opacity: 0; transform: translateY(20px) scale(.96); }
+    to { opacity: 1; transform: translateY(0) scale(1); }
+  }
+  .modal-close {
+    position: absolute; top: 16px; right: 16px;
+    width: 32px; height: 32px; border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 18px; color: var(--text-muted); transition: all .2s;
+  }
+  .modal-close:hover { background: #f5f5f5; color: var(--text); }
+  .modal h3 { font-size: 20px; font-weight: 700; margin-bottom: 16px; text-align: center; }
+
+  /* 打赏弹窗 */
+  .reward-qr {
+    width: 220px; height: 220px; margin: 0 auto 16px;
+    border-radius: 12px; overflow: hidden;
+    border: 4px solid var(--primary-bg);
+  }
+  .reward-qr img { width: 100%; height: 100%; object-fit: cover; display: block; }
+  .reward-text {
+    text-align: center; font-size: 14px; color: var(--text-secondary);
+    font-style: italic; line-height: 1.7;
+  }
+
+  /* 帮助弹窗 */
+  .help-list { list-style: none; }
+  .help-list li {
+    padding: 10px 0; border-bottom: 1px solid var(--border);
+    font-size: 14px; color: var(--text-secondary); line-height: 1.6;
+    display: flex; gap: 10px;
+  }
+  .help-list li:last-child { border-bottom: none; }
+  .help-list .num {
+    flex-shrink: 0; width: 22px; height: 22px; border-radius: 50%;
+    background: var(--primary); color: #fff; font-size: 12px; font-weight: 700;
+    display: flex; align-items: center; justify-content: center;
+  }
+
+  /* 解锁弹窗 */
+  .unlock-article {
+    background: var(--primary-bg); border-radius: 12px; padding: 16px;
+    margin-bottom: 16px; text-align: center;
+  }
+  .unlock-article .tag {
+    display: inline-block; font-size: 11px; background: var(--primary);
+    color: #fff; padding: 2px 10px; border-radius: 50px; margin-bottom: 8px;
+  }
+  .unlock-article h4 { font-size: 15px; font-weight: 600; margin-bottom: 12px; line-height: 1.5; }
+  .unlock-qr {
+    width: 160px; height: 160px; margin: 0 auto 10px;
+    background: #fff; border-radius: 8px; padding: 8px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+  }
+  .unlock-qr img { width: 100%; height: 100%; display: block; }
+  .unlock-qr-tip { font-size: 12px; color: var(--text-muted); margin-bottom: 8px; }
+  .unlock-article a {
+    font-size: 13px; color: var(--primary); text-decoration: underline;
+    word-break: break-all;
+  }
+  .unlock-steps { font-size: 13px; color: var(--text-secondary); line-height: 1.8; margin-bottom: 16px; }
+  .unlock-steps strong { color: var(--text); }
+  .unlock-steps .step-key { color: var(--primary); font-weight: 700; }
+  .unlock-btn {
+    width: 100%; padding: 13px; border-radius: 10px;
+    background: linear-gradient(135deg, var(--primary), var(--primary-light));
+    color: #fff; font-size: 15px; font-weight: 700;
+    transition: all .2s;
+  }
+  .unlock-btn:hover { transform: translateY(-1px); }
+  .unlock-note { text-align: center; font-size: 12px; color: var(--text-muted); margin-top: 10px; }
+
+  /* ========== Toast ========== */
+  .toast {
+    position: fixed; top: 80px; left: 50%; transform: translateX(-50%);
+    background: rgba(26,26,26,0.9); color: #fff;
+    padding: 10px 22px; border-radius: 50px; font-size: 14px;
+    z-index: 2000; opacity: 0; transition: opacity .3s;
+    pointer-events: none;
+  }
+  .toast.show { opacity: 1; }
+
+  /* ========== 页脚 ========== */
+  .footer {
+    text-align: center; padding: 30px 20px;
+    font-size: 12px; color: var(--text-muted);
+  }
+  .footer a { color: var(--primary); }
+
+  /* ========== 响应式 ========== */
+  @media (max-width: 640px) {
+    .hero h1 { font-size: 24px; }
+    .dim-grid { grid-template-columns: 1fr; }
+    .nav-btn span { display: none; }
+    .nav-btn.follow span { display: inline; }
+    .header-inner { padding: 10px 14px; }
+    .card { padding: 18px; }
+    .modal { padding: 24px 20px; }
+  }
+</style>
+</head>
+<body>
+
+<!-- ========== 顶部导航 ========== -->
+<header class="header">
+  <div class="header-inner">
+    <div class="logo" onclick="location.reload()">
+      <div class="logo-icon">雀</div>
+      <span>朱雀 AI 检测</span>
+    </div>
+    <nav class="nav-actions">
+      <a class="nav-btn follow" id="navFollow" target="_blank" rel="noopener">
+        <img id="navAvatar" src="" alt="avatar">
+        <span>关注我</span>
+      </a>
+      <button class="nav-btn reward" onclick="openModal('rewardModal')">❤ 打赏</button>
+      <button class="nav-btn" onclick="openModal('helpModal')">❓ 帮助</button>
+    </nav>
+  </div>
+</header>
+
+<!-- ========== 主体 ========== -->
+<main class="main">
+  <div class="hero">
+    <h1>AI 文本检测器</h1>
+    <p>从困惑度、爆发性、句式模式三维度，精准识别 AI 生成内容</p>
+    <div class="quota-badge" id="quotaBadge">
+      <span>🎫 剩余免费次数：</span><span id="quotaNum">5</span>
+    </div>
+  </div>
+
+  <!-- 输入卡片 -->
+  <div class="card">
+    <div class="textarea-wrap">
+      <textarea id="textInput" placeholder="在此粘贴需要检测的文本（建议 100~1000 字）…" maxlength="5000"></textarea>
+      <div class="char-count" id="charCount">0 / 1000</div>
+    </div>
+
+    <!-- 自带 API Key 折叠区 -->
+    <div class="apikey-toggle" id="apikeyToggle" onclick="toggleApiKey()">
+      <span class="arrow">▶</span>
+      <span>使用自己的 API Key（无限检测，密钥仅存内存不落地）</span>
+    </div>
+    <div class="apikey-panel" id="apikeyPanel">
+      <label for="apiProvider">选择厂商</label>
+      <select id="apiProvider">
+        <option value="doubao">豆包（ark- 开头）</option>
+        <option value="deepseek">DeepSeek（sk- 开头）</option>
+      </select>
+      <label for="apiKeyInput">API Key</label>
+      <input type="password" id="apiKeyInput" placeholder="填入对应厂商的 API Key" autocomplete="off">
+      <p class="apikey-hint">🔒 密钥仅保存在当前页面内存中，刷新即清除，绝不发送到第三方。</p>
+    </div>
+
+    <button class="detect-btn" id="detectBtn" onclick="doDetect()">开始检测</button>
+  </div>
+
+  <!-- 结果区 -->
+  <div class="result-section" id="resultSection">
+    <!-- 概率卡片 -->
+    <div class="card probability-card">
+      <div class="prob-ring">
+        <svg width="140" height="140" viewBox="0 0 140 140">
+          <defs>
+            <linearGradient id="grad" x1="0%" y1="0%" x2="100%" y2="100%">
+              <stop offset="0%" stop-color="#C8102E"/>
+              <stop offset="100%" stop-color="#E63946"/>
+            </linearGradient>
+          </defs>
+          <circle class="bg" cx="70" cy="70" r="60"/>
+          <circle class="fg" id="probFg" cx="70" cy="70" r="60"
+            stroke-dasharray="376.99" stroke-dashoffset="376.99"/>
+        </svg>
+        <div class="prob-value">
+          <span class="num" id="probNum">0%</span>
+          <span class="label">AI 生成概率</span>
+        </div>
+      </div>
+      <div class="verdict" id="verdictText">--</div>
+      <div class="verdict-desc">基于统计语言学三维度综合分析</div>
+    </div>
+
+    <!-- 原文高亮标注 -->
+    <div class="card highlight-card" id="highlightCard" style="display:none">
+      <div class="section-title">原文标注</div>
+      <div class="highlight-legend">
+        <span class="legend-item"><span class="legend-dot high"></span>绝对AI生成（≥70%）</span>
+        <span class="legend-item"><span class="legend-dot low"></span>建议修改（55-70%）</span>
+        <span style="margin-left:auto;color:var(--text-muted)">鼠标悬停查看详情</span>
+      </div>
+      <div class="highlight-text" id="highlightText"></div>
+    </div>
+
+    <!-- 三维度 -->
+    <div class="card">
+      <div class="section-title">三维度分析</div>
+      <div class="dim-grid">
+        <div class="dim-item">
+          <h4>困惑度 Perplexity</h4>
+          <p id="dimPerplexity">--</p>
+        </div>
+        <div class="dim-item">
+          <h4>爆发性 Burstiness</h4>
+          <p id="dimBurstiness">--</p>
+        </div>
+        <div class="dim-item">
+          <h4>词汇句式模式</h4>
+          <p id="dimPatterns">--</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- 可疑句子 -->
+    <div class="card" id="suspiciousCard" style="display:none">
+      <div class="section-title">可疑句子</div>
+      <ul class="suspicious-list" id="suspiciousList"></ul>
+    </div>
+
+    <!-- 修改建议 -->
+    <div class="card" id="adviceCard" style="display:none">
+      <div class="section-title">优化建议</div>
+      <div class="advice-box" id="adviceText"></div>
+    </div>
+  </div>
+</main>
+
+<!-- ========== 打赏弹窗 ========== -->
+<div class="modal-overlay" id="rewardModal">
+  <div class="modal">
+    <button class="modal-close" onclick="closeModal('rewardModal')">✕</button>
+    <h3>赞赏支持 ❤</h3>
+    <div class="reward-qr"><img id="rewardQrImg" src="" alt="打赏二维码"></div>
+    <p class="reward-text">"你的支持是我维护和更新的动力"</p>
+  </div>
+</div>
+
+<!-- ========== 帮助弹窗 ========== -->
+<div class="modal-overlay" id="helpModal">
+  <div class="modal">
+    <button class="modal-close" onclick="closeModal('helpModal')">✕</button>
+    <h3>使用说明</h3>
+    <ul class="help-list">
+      <li><span class="num">1</span><span>每位新访客默认赠送 <strong>5 次</strong>免费检测额度。</span></li>
+      <li><span class="num">2</span><span>额度用完后，阅读推荐的公众号文章并点击文末「阅读原文」即可自动解锁 <strong>+5 次</strong>。</span></li>
+      <li><span class="num">3</span><span>也可展开「自带 API Key」，填入自己的 DeepSeek Key 即可<strong>无限检测</strong>，密钥仅存内存不落地。</span></li>
+      <li><span class="num">4</span><span>检测结果从困惑度、爆发性、词汇句式三个维度综合判断，仅供参考。</span></li>
+    </ul>
+  </div>
+</div>
+
+<!-- ========== 解锁弹窗 ========== -->
+<div class="modal-overlay" id="unlockModal">
+  <div class="modal">
+    <button class="modal-close" onclick="closeModal('unlockModal')">✕</button>
+    <h3>免费次数已用完</h3>
+    <div class="unlock-article">
+      <span class="tag">推荐阅读</span>
+      <h4 id="unlockArticleTitle">--</h4>
+      <div class="unlock-qr">
+        <img id="unlockQrImg" src="" alt="扫码阅读文章">
+      </div>
+      <p class="unlock-qr-tip">微信扫码，手机阅读文章</p>
+    </div>
+    <div class="unlock-steps">
+      <strong>解锁步骤：</strong><br>
+      ① <span class="step-key">微信扫码</span>上方二维码，手机打开文章<br>
+      ② 阅读全文，<span class="step-key">点击文中广告</span>，拉到底部<span class="step-key">点「阅读原文」</span><br>
+      ③ 本页将<strong>自动检测解锁</strong>，+5 次额度即时到账
+    </div>
+    <button class="unlock-btn" onclick="confirmUnlock()">已在电脑端阅读，直接解锁</button>
+    <p class="unlock-note">解锁链接 24 小时内有效</p>
+  </div>
+</div>
+
+<!-- Toast -->
+<div class="toast" id="toast"></div>
+
+<footer class="footer">
+  <p>朱雀 AI 文本检测器 · 基于 DeepSeek 大模型驱动</p>
+</footer>
+
+<script>
+/* ========== 初始化配置 ========== */
+(function initConfig() {
+  const cfg = window.SITE_CONFIG;
+  document.getElementById('navAvatar').src = cfg.AVATAR_URL;
+  document.getElementById('navFollow').href = cfg.FOLLOW_LINK;
+  document.getElementById('rewardQrImg').src = cfg.REWARD_QR_CODE;
+})();
+
+/* ========== 状态 ========== */
+const STORE_KEY = 'zhuque_client_token';
+let currentUnlockToken = '';
+
+function getClientToken() {
+  try { return localStorage.getItem(STORE_KEY) || ''; } catch { return ''; }
+}
+function setClientToken(t) {
+  try { localStorage.setItem(STORE_KEY, t); } catch {}
+}
+
+/* ========== 弹窗控制 ========== */
+function openModal(id) { document.getElementById(id).classList.add('show'); }
+function closeModal(id) {
+  document.getElementById(id).classList.remove('show');
+  if (id === 'unlockModal') stopUnlockPolling();
+}
+document.querySelectorAll('.modal-overlay').forEach(overlay => {
+  overlay.addEventListener('click', e => { if (e.target === overlay) overlay.classList.remove('show'); });
+});
+
+/* ========== Toast ========== */
+let toastTimer;
+function showToast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => t.classList.remove('show'), 2500);
+}
+
+/* ========== 字数统计 ========== */
+const textInput = document.getElementById('textInput');
+const charCount = document.getElementById('charCount');
+textInput.addEventListener('input', () => {
+  const len = textInput.value.length;
+  charCount.textContent = len + ' / 1000';
+  charCount.classList.toggle('over', len > 1000);
+});
+
+/* ========== 自带 Key 折叠 ========== */
+function toggleApiKey() {
+  const panel = document.getElementById('apikeyPanel');
+  const toggle = document.getElementById('apikeyToggle');
+  panel.classList.toggle('show');
+  toggle.classList.toggle('open');
+}
+
+/* ========== 核心检测 ========== */
+async function doDetect() {
+  const text = textInput.value.trim();
+  if (text.length < 10) { showToast('请输入至少 10 个字符'); return; }
+
+  const btn = document.getElementById('detectBtn');
+  const apiKey = document.getElementById('apiKeyInput').value.trim();
+  const useOwnKey = apiKey.length > 10;
+
+  btn.disabled = true;
+  btn.classList.add('loading');
+  btn.textContent = '检测中…';
+
+  try {
+    const resp = await fetch('/api/check', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        text,
+        client_token: getClientToken(),
+        api_key: useOwnKey ? apiKey : undefined,
+        provider: useOwnKey ? document.getElementById('apiProvider').value : undefined
+      })
+    });
+    const data = await resp.json();
+
+    if (!resp.ok) {
+      showToast(data.error || '检测失败，请重试');
+      return;
+    }
+
+    // 额度耗尽 → 展示解锁弹窗（开始轮询手机端解锁状态）
+    if (data.locked) {
+      if (data.client_token) setClientToken(data.client_token);
+      updateQuotaDisplay(0, useOwnKey);
+      showUnlockModal(data.article, data.unlock_token, data.cid);
+      return;
+    }
+
+    // 正常结果
+    if (data.client_token) setClientToken(data.client_token);
+    updateQuotaDisplay(data.quota, useOwnKey);
+    renderResult(data.result);
+
+  } catch (err) {
+    showToast('网络异常：' + err.message);
+  } finally {
+    btn.disabled = false;
+    btn.classList.remove('loading');
+    btn.textContent = '开始检测';
+  }
+}
+
+/* ========== 额度显示 ========== */
+function updateQuotaDisplay(quota, useOwnKey) {
+  const badge = document.getElementById('quotaBadge');
+  const num = document.getElementById('quotaNum');
+  if (useOwnKey) {
+    badge.classList.add('hidden');
+  } else {
+    badge.classList.remove('hidden');
+    num.textContent = quota;
+  }
+}
+
+// 初始化额度显示（从 token 解析，仅做展示用，真实校验在后端）
+(function initQuotaDisplay() {
+  const token = getClientToken();
+  if (!token) { updateQuotaDisplay(5, false); return; }
+  try {
+    const payload = JSON.parse(atob(token.split('.')[0].replace(/-/g,'+').replace(/_/g,'/')));
+    updateQuotaDisplay(payload.q, false);
+  } catch { updateQuotaDisplay(5, false); }
+})();
+
+/* ========== 解锁弹窗 ========== */
+let unlockPollTimer = null;
+let currentUnlockCid = '';
+
+function showUnlockModal(article, unlockToken, cid) {
+  currentUnlockToken = unlockToken || '';
+  currentUnlockCid = cid || '';
+  if (article) {
+    document.getElementById('unlockArticleTitle').textContent = article.title || '推荐文章';
+    const articleUrl = article.url || '#';
+    // 二维码指向 /api/read 中间页：存 cid 到手机 cookie，再跳转文章
+    // 这样手机端点「阅读原文」回到 /api/auto-unlock 时能识别出对应用户
+    const readUrl = window.location.origin + '/api/read?cid=' + encodeURIComponent(currentUnlockCid) + '&url=' + encodeURIComponent(articleUrl);
+    const qrUrl = 'https://api.qrserver.com/v1/create-qr-code/?size=200x200&margin=8&data=' + encodeURIComponent(readUrl);
+    document.getElementById('unlockQrImg').src = qrUrl;
+  }
+  openModal('unlockModal');
+  // 开始轮询：手机端点阅读原文解锁后，电脑端自动同步
+  startUnlockPolling();
+}
+
+function startUnlockPolling() {
+  stopUnlockPolling();
+  if (!currentUnlockCid) return;
+  unlockPollTimer = setInterval(async () => {
+    try {
+      const resp = await fetch('/api/status?cid=' + encodeURIComponent(currentUnlockCid));
+      const data = await resp.json();
+      if (data.unlocked && data.client_token) {
+        // 手机端已解锁，同步到电脑端
+        setClientToken(data.client_token);
+        updateQuotaDisplay(data.quota, false);
+        stopUnlockPolling();
+        closeModal('unlockModal');
+        showToast('解锁成功！剩余 ' + data.quota + ' 次');
+      }
+    } catch (e) { /* 轮询出错忽略，继续下一次 */ }
+  }, 2000);
+}
+
+function stopUnlockPolling() {
+  if (unlockPollTimer) {
+    clearInterval(unlockPollTimer);
+    unlockPollTimer = null;
+  }
+}
+
+function confirmUnlock() {
+  if (!currentUnlockToken) {
+    showToast('解锁链接无效，请重新检测获取');
+    return;
+  }
+  // 电脑端直接解锁（备用方式：用户不想用手机时点此按钮）
+  window.open('/api/unlock?token=' + encodeURIComponent(currentUnlockToken), '_blank');
+  closeModal('unlockModal');
+  stopUnlockPolling();
+  showToast('请在新页面完成解锁，完成后返回本页');
+  // 3 秒后检查是否已解锁
+  setTimeout(async () => {
+    if (!currentUnlockCid) return;
+    try {
+      const resp = await fetch('/api/status?cid=' + encodeURIComponent(currentUnlockCid));
+      const data = await resp.json();
+      if (data.unlocked && data.client_token) {
+        setClientToken(data.client_token);
+        updateQuotaDisplay(data.quota, false);
+        showToast('解锁成功！剩余 ' + data.quota + ' 次');
+      }
+    } catch {}
+  }, 3000);
+}
+
+/* ========== 渲染结果 ========== */
+function renderResult(result) {
+  if (!result) { showToast('结果解析失败'); return; }
+
+  document.getElementById('resultSection').classList.add('show');
+
+  // 概率环
+  const prob = Math.max(0, Math.min(100, result.ai_probability || 0));
+  const circumference = 2 * Math.PI * 60; // ≈376.99
+  const offset = circumference * (1 - prob / 100);
+  setTimeout(() => {
+    document.getElementById('probFg').style.strokeDashoffset = offset;
+  }, 100);
+  document.getElementById('probNum').textContent = prob + '%';
+  document.getElementById('verdictText').textContent = result.verdict || '--';
+
+  // 三维度
+  const dim = result.dimensions || {};
+  document.getElementById('dimPerplexity').textContent = dim.perplexity || '--';
+  document.getElementById('dimBurstiness').textContent = dim.burstiness || '--';
+  document.getElementById('dimPatterns').textContent = dim.patterns || '--';
+
+  // 原文高亮标注
+  const highlightCard = document.getElementById('highlightCard');
+  const highlightText = document.getElementById('highlightText');
+  const sentenceAnalysis = result.sentence_analysis;
+  const oldSuspicious = result.suspicious_sentences;
+
+  if (Array.isArray(sentenceAnalysis) && sentenceAnalysis.length > 0) {
+    highlightCard.style.display = 'block';
+    highlightText.innerHTML = renderHighlightedText(textInput.value, sentenceAnalysis);
+  } else if (Array.isArray(oldSuspicious) && oldSuspicious.length > 0) {
+    // 兼容旧格式：无逐句分析时降级为列表
+    highlightCard.style.display = 'block';
+    highlightText.innerHTML = oldSuspicious.map(s =>
+      `<span class="hl hl-medium" title="可疑句子">${escapeHtml(s)}</span>`
+    ).join(' ');
+  } else {
+    highlightCard.style.display = 'none';
+  }
+
+  // 建议
+  const advice = result.improvement_advice;
+  const adviceCard = document.getElementById('adviceCard');
+  if (advice && advice.trim()) {
+    adviceCard.style.display = 'block';
+    document.getElementById('adviceText').textContent = advice;
+  } else {
+    adviceCard.style.display = 'none';
+  }
+
+  // 滚动到结果
+  setTimeout(() => {
+    document.getElementById('resultSection').scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }, 200);
+}
+
+function escapeHtml(str) {
+  const div = document.createElement('div');
+  div.textContent = str;
+  return div.innerHTML;
+}
+
+/**
+ * 将原文按句子分割，匹配 sentence_analysis 后渲染高亮
+ */
+function renderHighlightedText(originalText, analysis) {
+  if (!originalText) return '';
+  // 按中文句号、问号、感叹号、分号、换行分割，保留分隔符
+  const sentences = originalText.split(/(?<=[。！？；\n])/);
+  const norm = s => (s || '').replace(/\s+/g, '').replace(/[，。、；：！？""''（）《》【】]/g, '');
+
+  return sentences.map(sentence => {
+    const trimmed = sentence.trim();
+    if (!trimmed) return sentence;
+    const normSentence = norm(trimmed);
+
+    // 在分析结果中找最佳匹配
+    let match = null;
+    for (const item of analysis) {
+      if (!item || !item.text) continue;
+      const normItem = norm(item.text);
+      if (!normItem) continue;
+      // 互相包含或高度重叠即视为匹配
+      if (normSentence.includes(normItem) || normItem.includes(normSentence)) {
+        match = item;
+        break;
+      }
+      // 计算重叠度
+      const shorter = normSentence.length < normItem.length ? normSentence : normItem;
+      const longer = normSentence.length >= normItem.length ? normSentence : normItem;
+      if (shorter.length > 5 && longer.includes(shorter.substring(0, Math.floor(shorter.length * 0.6)))) {
+        match = item;
+        break;
+      }
+    }
+
+    if (match) {
+      // 两档：红色=绝对AI(≥70%)，黄色=建议修改(55-70%)，低于55%不标注
+      const prob = match.probability != null ? Number(match.probability) : 0;
+      if (prob < 55) return escapeHtml(sentence); // 低于阈值不高亮
+      let level = prob >= 70 ? 'high' : 'low';
+      const reason = match.reason || '';
+      const label = level === 'high' ? '绝对AI生成' : '建议修改';
+      const tip = `${label} ${prob}%\n${reason}`;
+      return `<span class="hl hl-${level}" title="${tip.replace(/"/g, '&quot;')}">${escapeHtml(sentence)}</span>`;
+    }
+    return escapeHtml(sentence);
+  }).join('');
+}
+
+/* ========== 回车快捷键（Ctrl+Enter 检测）========== */
+textInput.addEventListener('keydown', e => {
+  if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') doDetect();
+});
+</script>
+</body>
+</html>

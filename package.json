@@ -1,0 +1,14 @@
+{
+  "name": "zhuque-ai-detector",
+  "version": "1.0.0",
+  "description": "朱雀 AI 文本检测器 - 极简现代化 AIGC 文本检测工具",
+  "private": true,
+  "license": "MIT",
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "scripts": {
+    "dev": "vercel dev",
+    "deploy": "vercel --prod"
+  }
+}
