@@ -283,7 +283,7 @@ module.exports = async (req, res) => {
         callResult = await callStandard(
           text, apiKey,
           `${config.DOUBAO_BASE_URL}/chat/completions`,
-          config.DOUBAO_MODEL
+          config.DOUBAO_STANDARD_MODEL
         );
       } else {
         // 服务端 Key：用 Context API，前缀缓存命中
@@ -295,7 +295,10 @@ module.exports = async (req, res) => {
       if (!apiKey) {
         return res.status(500).json({ error: '服务端未配置 AI_API_KEY，请在环境变量中设置，或使用「自带 API Key」模式' });
       }
-      callResult = await callStandard(text, apiKey, config.AI_API_URL, config.AI_MODEL);
+      // 自带 Key 选 DeepSeek 时用独立的 DeepSeek 地址/模型；否则用后端默认配置
+      const apiUrl = useOwnKey ? config.DEEPSEEK_API_URL : config.AI_API_URL;
+      const model = useOwnKey ? config.DEEPSEEK_MODEL : config.AI_MODEL;
+      callResult = await callStandard(text, apiKey, apiUrl, model);
     }
   } catch (err) {
     return res.status(err.status || 500).json({

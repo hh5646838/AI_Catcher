@@ -8,16 +8,21 @@ module.exports = {
   // "doubao"   = 豆包 Context API（显式创建上下文缓存，需配置 Endpoint ID）
   AI_PROVIDER: process.env.AI_PROVIDER || "deepseek",
 
-  // ========== DeepSeek / 兼容 OpenAI 格式厂商配置 ==========
+  // ========== 后端默认厂商配置（免费用户用的，当前设为豆包）==========
   AI_API_URL: process.env.AI_API_URL || "https://api.deepseek.com/v1/chat/completions",
   AI_API_KEY: process.env.AI_API_KEY || "",
   AI_MODEL: process.env.AI_MODEL || "deepseek-v4-flash",
+
+  // ========== DeepSeek 独立配置（用户自带 Key 选 DeepSeek 时使用）==========
+  DEEPSEEK_API_URL: process.env.DEEPSEEK_API_URL || "https://api.deepseek.com/v1/chat/completions",
+  DEEPSEEK_MODEL: process.env.DEEPSEEK_MODEL || "deepseek-v4-flash",
 
   // ========== 豆包 Context API 配置（AI_PROVIDER=doubao 时生效）==========
   // 火山方舟控制台创建推理接入点后获得 Endpoint ID，格式如 ep-20250101xxxxx-xxxxx
   DOUBAO_BASE_URL: process.env.DOUBAO_BASE_URL || "https://ark.cn-beijing.volces.com/api/v3",
   DOUBAO_API_KEY: process.env.DOUBAO_API_KEY || "",
-  DOUBAO_MODEL: process.env.DOUBAO_MODEL || "",          // Endpoint ID，必填
+  DOUBAO_MODEL: process.env.DOUBAO_MODEL || "",          // Endpoint ID，Context API 用
+  DOUBAO_STANDARD_MODEL: process.env.DOUBAO_STANDARD_MODEL || process.env.AI_MODEL || "doubao-seed-2-0-mini-260428", // 标准接口用的模型名
   DOUBAO_CONTEXT_ID: process.env.DOUBAO_CONTEXT_ID || "", // 预创建的上下文缓存 ID，留空则自动创建并缓存
   DOUBAO_CONTEXT_TTL: parseInt(process.env.DOUBAO_CONTEXT_TTL || "3600", 10), // 缓存有效期秒
 
