@@ -4,21 +4,5 @@
     "api/*.js": {
       "maxDuration": 30
     }
-  },
-  "rewrites": [
-    { "source": "/api/check", "destination": "/api/check.js" },
-    { "source": "/api/unlock", "destination": "/api/unlock.js" },
-    { "source": "/api/status", "destination": "/api/status.js" },
-    { "source": "/api/read", "destination": "/api/read.js" },
-    { "source": "/api/auto-unlock", "destination": "/api/auto-unlock.js" }
-  ],
-  "headers": [
-    {
-      "source": "/(.*)",
-      "headers": [
-        { "key": "X-Content-Type-Options", "value": "nosniff" },
-        { "key": "Referrer-Policy", "value": "strict-origin-when-cross-origin" }
-      ]
-    }
-  ]
+  }
 }
