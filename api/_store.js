@@ -11,8 +11,16 @@
  */
 
 let memoryStore = new Map();
-let upstashUrl = process.env.UPSTASH_REDIS_REST_URL || '';
-let upstashToken = process.env.UPSTASH_REDIS_REST_TOKEN || '';
+// 兼容 Upstash 多种环境变量命名方式
+let upstashUrl = process.env.UPSTASH_REDIS_REST_URL
+  || process.env.UPSTASH_KV_REST_API_URL
+  || process.env.UPSTASH_REDIS_URL
+  || process.env.UPSTASH_KV_URL
+  || '';
+let upstashToken = process.env.UPSTASH_REDIS_REST_TOKEN
+  || process.env.UPSTASH_KV_REST_API_TOKEN
+  || process.env.UPSTASH_KV_REST_API_READ_ONLY_TOKEN
+  || '';
 
 // 兼容旧的 Vercel KV 环境变量（如果用户还在用）
 if (!upstashUrl && process.env.KV_REST_API_URL) {
