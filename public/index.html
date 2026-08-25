@@ -9,7 +9,9 @@
     SITE_TITLE:   "朱雀 AI 文本检测器 - 免费精准检测",
     AVATAR_URL:   "https://api.dicebear.com/7.x/adventurer/svg?seed=zhuque&backgroundColor=c8102e",
     FOLLOW_LINK:  "https://mp.weixin.qq.com/",
-    REWARD_QR_CODE: "https://api.qrserver.com/v1/create-qr-code/?size=240x240&data=https://mp.weixin.qq.com/"
+    REWARD_QR_CODE: "https://api.qrserver.com/v1/create-qr-code/?size=240x240&data=https://mp.weixin.qq.com/",
+    MORE_TOOLS_LINK: "https://jojocharm.top",
+    MORE_TOOLS_TEXT: "更多工具"
   };
   document.title = window.SITE_CONFIG.SITE_TITLE;
 </script>
@@ -83,6 +85,12 @@
     color: #fff;
   }
   .nav-btn.reward:hover { opacity: .9; transform: translateY(-1px); }
+  .nav-btn.more-tools {
+    background: linear-gradient(135deg, var(--primary), var(--primary-light));
+    color: #fff;
+    font-weight: 600;
+  }
+  .nav-btn.more-tools:hover { opacity: .9; transform: translateY(-1px); color: #fff; }
 
   /* ========== 主体 ========== */
   .main { max-width: 760px; margin: 0 auto; padding: 32px 20px 60px; }
@@ -370,6 +378,8 @@
     .dim-grid { grid-template-columns: 1fr; }
     .nav-btn span { display: none; }
     .nav-btn.follow span { display: inline; }
+    .nav-btn.more-tools .more-tools-text { display: inline; }
+    .nav-btn.more-tools { padding: 7px 10px; font-size: 12px; }
     .header-inner { padding: 10px 14px; }
     .card { padding: 18px; }
     .modal { padding: 24px 20px; }
@@ -390,7 +400,9 @@
         <img id="navAvatar" src="" alt="avatar">
         <span>关注我</span>
       </a>
-      <button class="nav-btn reward" onclick="openModal('rewardModal')">❤ 打赏</button>
+      <a class="nav-btn more-tools" id="navMoreTools" target="_blank" rel="noopener">
+        <span>🔧</span><span class="more-tools-text">更多工具</span>
+      </a>
       <button class="nav-btn" onclick="openModal('helpModal')">❓ 帮助</button>
     </nav>
   </div>
@@ -402,7 +414,7 @@
     <h1>AI 文本检测器</h1>
     <p>从困惑度、爆发性、句式模式三维度，精准识别 AI 生成内容</p>
     <div class="quota-badge" id="quotaBadge">
-      <span>🎫 剩余免费次数：</span><span id="quotaNum">5</span>
+      <span>🎫 剩余免费次数：</span><span id="quotaNum">9</span>
     </div>
   </div>
 
@@ -517,9 +529,9 @@
     <button class="modal-close" onclick="closeModal('helpModal')">✕</button>
     <h3>使用说明</h3>
     <ul class="help-list">
-      <li><span class="num">1</span><span>每位新访客默认赠送 <strong>5 次</strong>免费检测额度。</span></li>
-      <li><span class="num">2</span><span>额度用完后，阅读推荐的公众号文章并点击文末「阅读原文」即可自动解锁 <strong>+5 次</strong>。</span></li>
-      <li><span class="num">3</span><span>也可展开「自带 API Key」，填入自己的 DeepSeek Key 即可<strong>无限检测</strong>，密钥仅存内存不落地。</span></li>
+      <li><span class="num">1</span><span>每位新访客默认赠送 <strong id="helpFreeQuota">9 次</strong>免费检测额度。</span></li>
+      <li><span class="num">2</span><span>额度用完后，阅读推荐的公众号文章并点击文末「阅读原文」即可自动解锁 <strong id="helpUnlockQuota">+3 次</strong>。</span></li>
+      <li><span class="num">3</span><span>也可展开「自带 API Key」，填入自己的 API Key 即可<strong>无限检测</strong>，密钥仅存内存不落地。</span></li>
       <li><span class="num">4</span><span>检测结果从困惑度、爆发性、词汇句式三个维度综合判断，仅供参考。</span></li>
     </ul>
   </div>
@@ -542,7 +554,7 @@
       <strong>解锁步骤：</strong><br>
       ① <span class="step-key">微信扫码</span>上方二维码，手机打开文章<br>
       ② 阅读全文，<span class="step-key">点击文中广告</span>，拉到底部<span class="step-key">点「阅读原文」</span><br>
-      ③ 本页将<strong>自动检测解锁</strong>，+5 次额度即时到账
+      ③ 本页将<strong>自动检测解锁</strong>，<span id="unlockQuotaText">+3 次</span>额度即时到账
     </div>
     <button class="unlock-btn" onclick="confirmUnlock()">已在电脑端阅读，直接解锁</button>
     <p class="unlock-note">解锁链接 24 小时内有效</p>
@@ -563,7 +575,38 @@
   document.getElementById('navAvatar').src = cfg.AVATAR_URL;
   document.getElementById('navFollow').href = cfg.FOLLOW_LINK;
   document.getElementById('rewardQrImg').src = cfg.REWARD_QR_CODE;
+  const moreBtn = document.getElementById('navMoreTools');
+  if (moreBtn) {
+    moreBtn.href = cfg.MORE_TOOLS_LINK || '#';
+    moreBtn.querySelector('.more-tools-text').textContent = cfg.MORE_TOOLS_TEXT || '更多工具';
+  }
 })();
+
+/* ========== 从后端获取公开配置（额度等），动态更新前端文字 ========== */
+async function loadServerConfig() {
+  try {
+    const resp = await fetch('/api/settings');
+    if (!resp.ok) return;
+    const data = await resp.json();
+    if (data.free_quota) {
+      const el = document.getElementById('helpFreeQuota');
+      if (el) el.textContent = data.free_quota + ' 次';
+    }
+    if (data.unlock_quota) {
+      const el1 = document.getElementById('helpUnlockQuota');
+      if (el1) el1.textContent = '+' + data.unlock_quota + ' 次';
+      const el2 = document.getElementById('unlockQuotaText');
+      if (el2) el2.textContent = '+' + data.unlock_quota + ' 次';
+    }
+    if (data.max_text_length) {
+      const el = document.getElementById('charCount');
+      if (el) el.textContent = '0 / ' + data.max_text_length;
+      const ta = document.getElementById('textInput');
+      if (ta) ta.setAttribute('maxlength', data.max_text_length * 5);
+    }
+  } catch (e) { /* 静默失败，用默认值 */ }
+}
+loadServerConfig();
 
 /* ========== 状态 ========== */
 const STORE_KEY = 'zhuque_client_token';
