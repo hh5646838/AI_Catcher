@@ -40,9 +40,6 @@ module.exports = {
   // ========== 公众号文章库（随机抓取引流）==========
   // 替换为你自己的公众号文章地址；数量越多越不容易重复
   WECHAT_ARTICLES: [
-    { title: "朱雀工具使用指南：如何精准检测 AI 生成文本", url: "https://mp.weixin.qq.com/s/your-article-1" },
-    { title: "深度解析：AI 文本检测的三大核心原理", url: "https://mp.weixin.qq.com/s/your-article-2" },
-    { title: "从困惑度到爆发性：教你识别机器写作的痕迹", url: "https://mp.weixin.qq.com/s/your-article-3" },
-    { title: "写作者必看：如何让你的文章更像人类创作", url: "https://mp.weixin.qq.com/s/your-article-4" }
+    { title: "创造属于自己的鸡尾酒：调酒理论专栏「前言」", url: "https://mp.weixin.qq.com/s/toFKQ8IubYoj25GNSY_kIA" }
   ]
 };
