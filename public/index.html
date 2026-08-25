@@ -261,13 +261,24 @@
     background: #fafafa; border-radius: 10px; padding: 24px 18px 16px;
   }
   .hl {
-    border-radius: 3px; padding: 1px 3px; cursor: help;
+    border-radius: 3px; padding: 1px 3px; cursor: pointer;
     border-bottom: 2px solid transparent; transition: all .15s;
   }
   .hl:hover { transform: translateY(-1px); }
+  .hl.active { box-shadow: 0 0 0 2px rgba(200,16,46,0.3); }
   .hl-high { background: #fee2e2; border-bottom-color: #dc2626; color: #991b1b; }
   .hl-medium { background: #ffedd5; border-bottom-color: #f97316; color: #9a3412; }
   .hl-low { background: #fef9c3; border-bottom-color: #eab308; color: #854d0e; }
+  .hl-detail {
+    position: absolute; z-index: 100; max-width: 280px;
+    background: #1a1a1a; color: #fff; padding: 10px 14px;
+    border-radius: 8px; font-size: 13px; line-height: 1.5;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.2);
+    pointer-events: none; opacity: 0; transition: opacity .15s;
+  }
+  .hl-detail.show { opacity: 1; pointer-events: auto; }
+  .hl-detail .hl-detail-label { font-weight: 600; margin-bottom: 4px; }
+  .hl-detail .hl-detail-reason { color: #ccc; }
   .no-suspicious { color: var(--text-muted); font-size: 14px; text-align: center; padding: 20px; }
 
   /* ========== 弹窗 ========== */
@@ -470,14 +481,15 @@
     </div>
 
     <!-- 原文高亮标注 -->
-    <div class="card highlight-card" id="highlightCard" style="display:none">
+    <div class="card highlight-card" id="highlightCard" style="display:none;position:relative">
       <div class="section-title">原文标注</div>
       <div class="highlight-legend">
         <span class="legend-item"><span class="legend-dot high"></span>绝对AI生成（≥70%）</span>
         <span class="legend-item"><span class="legend-dot low"></span>建议修改（55-70%）</span>
-        <span style="margin-left:auto;color:var(--text-muted)">鼠标悬停查看详情</span>
+        <span style="margin-left:auto;color:var(--text-muted)">点击句子查看详情</span>
       </div>
-      <div class="highlight-text" id="highlightText"></div>
+      <div class="highlight-text" id="highlightText" style="position:relative"></div>
+      <div class="hl-detail" id="hlDetail"></div>
     </div>
 
     <!-- 三维度 -->
@@ -914,10 +926,62 @@ function renderHighlightedText(originalText, analysis) {
       const reason = match.reason || '';
       const label = level === 'high' ? '绝对AI生成' : '建议修改';
       const tip = `${label} ${prob}%\n${reason}`;
-      return `<span class="hl hl-${level}" title="${tip.replace(/"/g, '&quot;')}">${escapeHtml(sentence)}</span>`;
+      return `<span class="hl hl-${level}" data-label="${label}" data-prob="${prob}" data-reason="${escapeHtml(reason)}" title="${tip.replace(/"/g, '&quot;')}">${escapeHtml(sentence)}</span>`;
     }
     return escapeHtml(sentence);
   }).join('');
+}
+
+/* ========== 高亮句子点击查看详情（手机/电脑通用）========== */
+const hlDetail = document.getElementById('hlDetail');
+let activeHl = null;
+
+document.getElementById('highlightText').addEventListener('click', function(e) {
+  const hl = e.target.closest('.hl');
+  if (!hl) {
+    hideHlDetail();
+    return;
+  }
+  e.stopPropagation();
+  if (activeHl === hl) {
+    hideHlDetail();
+    return;
+  }
+  showHlDetail(hl);
+});
+
+document.addEventListener('click', function(e) {
+  if (!e.target.closest('.hl') && !e.target.closest('.hl-detail')) {
+    hideHlDetail();
+  }
+});
+
+function showHlDetail(hl) {
+  if (activeHl) activeHl.classList.remove('active');
+  activeHl = hl;
+  hl.classList.add('active');
+  const label = hl.dataset.label || '';
+  const prob = hl.dataset.prob || '';
+  const reason = hl.dataset.reason || '';
+  hlDetail.innerHTML = `<div class="hl-detail-label">${label} ${prob}%</div><div class="hl-detail-reason">${reason}</div>`;
+  hlDetail.classList.add('show');
+  // 定位到句子下方
+  const cardRect = document.getElementById('highlightCard').getBoundingClientRect();
+  const hlRect = hl.getBoundingClientRect();
+  let top = hlRect.bottom - cardRect.top + 6;
+  let left = hlRect.left - cardRect.left;
+  // 防止超出右边界
+  const detailWidth = 280;
+  if (left + detailWidth > cardRect.width) left = cardRect.width - detailWidth - 10;
+  if (left < 10) left = 10;
+  hlDetail.style.top = top + 'px';
+  hlDetail.style.left = left + 'px';
+}
+
+function hideHlDetail() {
+  if (activeHl) activeHl.classList.remove('active');
+  activeHl = null;
+  hlDetail.classList.remove('show');
 }
 
 /* ========== 回车快捷键（Ctrl+Enter 检测）========== */
