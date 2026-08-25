@@ -1,0 +1,19 @@
+{
+  "free_quota": 9,
+  "unlock_quota": 3,
+  "max_text_length": 1000,
+  "token_expire_days": 30,
+  "unlock_token_expire_hours": 24,
+  "help_items": [
+    "每位新访客默认赠送 <strong>{free_quota} 次</strong>免费检测额度。",
+    "额度用完后，阅读推荐的公众号文章并点击文末「阅读原文」即可自动解锁 <strong>+{unlock_quota} 次</strong>。",
+    "也可展开「自带 API Key」，填入自己的 API Key 即可<strong>无限检测</strong>，密钥仅存内存不落地。",
+    "检测结果从困惑度、爆发性、词汇句式三个维度综合判断，仅供参考。"
+  ],
+  "wechat_articles": [
+    { "title": "朱雀工具使用指南：如何精准检测 AI 生成文本", "url": "https://mp.weixin.qq.com/s/your-article-1" },
+    { "title": "深度解析：AI 文本检测的三大核心原理", "url": "https://mp.weixin.qq.com/s/your-article-2" },
+    { "title": "从困惑度到爆发性：教你识别机器写作的痕迹", "url": "https://mp.weixin.qq.com/s/your-article-3" },
+    { "title": "写作者必看：如何让你的文章更像人类创作", "url": "https://mp.weixin.qq.com/s/your-article-4" }
+  ]
+}

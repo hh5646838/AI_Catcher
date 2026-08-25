@@ -528,9 +528,9 @@
   <div class="modal">
     <button class="modal-close" onclick="closeModal('helpModal')">✕</button>
     <h3>使用说明</h3>
-    <ul class="help-list">
-      <li><span class="num">1</span><span>每位新访客默认赠送 <strong id="helpFreeQuota">9 次</strong>免费检测额度。</span></li>
-      <li><span class="num">2</span><span>额度用完后，阅读推荐的公众号文章并点击文末「阅读原文」即可自动解锁 <strong id="helpUnlockQuota">+3 次</strong>。</span></li>
+    <ul class="help-list" id="helpList">
+      <li><span class="num">1</span><span>每位新访客默认赠送 <strong>9 次</strong>免费检测额度。</span></li>
+      <li><span class="num">2</span><span>额度用完后，阅读推荐的公众号文章并点击文末「阅读原文」即可自动解锁 <strong>+3 次</strong>。</span></li>
       <li><span class="num">3</span><span>也可展开「自带 API Key」，填入自己的 API Key 即可<strong>无限检测</strong>，密钥仅存内存不落地。</span></li>
       <li><span class="num">4</span><span>检测结果从困惑度、爆发性、词汇句式三个维度综合判断，仅供参考。</span></li>
     </ul>
@@ -589,12 +589,10 @@ async function loadServerConfig() {
     if (!resp.ok) return;
     const data = await resp.json();
     if (data.free_quota) {
-      const el = document.getElementById('helpFreeQuota');
-      if (el) el.textContent = data.free_quota + ' 次';
+      const el = document.getElementById('quotaNum');
+      if (el && !getClientToken()) el.textContent = data.free_quota;
     }
     if (data.unlock_quota) {
-      const el1 = document.getElementById('helpUnlockQuota');
-      if (el1) el1.textContent = '+' + data.unlock_quota + ' 次';
       const el2 = document.getElementById('unlockQuotaText');
       if (el2) el2.textContent = '+' + data.unlock_quota + ' 次';
     }
@@ -603,6 +601,14 @@ async function loadServerConfig() {
       if (el) el.textContent = '0 / ' + data.max_text_length;
       const ta = document.getElementById('textInput');
       if (ta) ta.setAttribute('maxlength', data.max_text_length * 5);
+    }
+    if (data.help_items && data.help_items.length) {
+      const list = document.getElementById('helpList');
+      if (list) {
+        list.innerHTML = data.help_items.map((item, i) =>
+          `<li><span class="num">${i + 1}</span><span>${item}</span></li>`
+        ).join('');
+      }
     }
   } catch (e) { /* 静默失败，用默认值 */ }
 }

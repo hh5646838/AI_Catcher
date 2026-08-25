@@ -1,6 +1,6 @@
 /**
  * 朱雀 AI 文本检测器 - 统一配置文件
- * 运营配置（额度/文章库/字数限制）在 config.json，后期只改 JSON 不用动代码
+ * 运营配置（额度/文章库/帮助文字）在 runtime.json，后期只改 JSON 不用动代码
  * API/密钥等敏感配置通过环境变量注入
  */
 const fs = require("fs");
@@ -8,7 +8,7 @@ const path = require("path");
 
 let runtime = {};
 try {
-  runtime = JSON.parse(fs.readFileSync(path.join(__dirname, "config.json"), "utf8"));
+  runtime = JSON.parse(fs.readFileSync(path.join(__dirname, "runtime.json"), "utf8"));
 } catch (e) {
   console.warn("[config] 读取 config.json 失败，使用默认值", e.message);
 }
@@ -45,5 +45,8 @@ module.exports = {
   // ========== 公众号文章库（从 config.json 读取）==========
   WECHAT_ARTICLES: runtime.wechat_articles || [
     { title: "朱雀工具使用指南", url: "https://mp.weixin.qq.com/s/your-article-1" }
-  ]
+  ],
+
+  // ========== 帮助弹窗文字（从 config.json 读取，支持 {free_quota}/{unlock_quota} 占位符）==========
+  HELP_ITEMS: runtime.help_items || []
 };
