@@ -44,7 +44,7 @@ module.exports = {
 
   // ========== 公众号文章库（从 config.json 读取）==========
   WECHAT_ARTICLES: runtime.wechat_articles || [
-    { title: "朱雀工具使用指南", url: "https://mp.weixin.qq.com/s/your-article-1" }
+    { title: "赤燕工具使用指南", url: "https://mp.weixin.qq.com/s/your-article-1" }
   ],
 
   // ========== 帮助弹窗文字（从 config.json 读取，支持 {free_quota}/{unlock_quota} 占位符）==========
